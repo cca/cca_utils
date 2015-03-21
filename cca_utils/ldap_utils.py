@@ -461,3 +461,32 @@ def replace_email_aliases(username, aliases):
         return True
     except:
         return False
+
+
+def ldap_generate_username(first, last):
+    '''
+    Given a first and last name, generate a standard username
+    '''
+    # Strip spaces from first and last
+    first = first.replace(' ', '')
+    last = last.replace(' ', '')
+
+    username = "{initial}{last}".format(initial=first[:1], last=last).lower()
+    return username
+
+
+def ldap_iterate_username(desired_username):
+    '''
+    Increment digits onto an LDAP username that already exists until an available one is found.
+    If desired_username does not exist, we shouldn't be incrementing - return same.
+    '''
+
+    if not ldap_get_user_data(desired_username):
+        return desired_username
+
+    counter = 1
+    while ldap_get_user_data(desired_username):
+        desired_username = "{desired_username}{counter}".format(desired_username=desired_username, counter=counter)
+        counter += 1
+
+    return desired_username
