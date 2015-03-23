@@ -111,7 +111,7 @@ def ldap_search(search_type, q):
         filter = '(sn={q}*)'.format(q=q)
 
     if search_type == "id":
-        filter = '(ccaEmployeeNumber={q}*)'.format(q=q)
+        filter = '(|(employeeNumber={q}*)(ccaEmployeeNumber={q}*))'.format(q=q)
 
     conn = ldap_connect()
     dn = "ou=People,dc=cca,dc=edu"
