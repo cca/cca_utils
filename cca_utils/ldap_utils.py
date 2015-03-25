@@ -492,9 +492,9 @@ def ldap_iterate_username(desired_username):
     return desired_username
 
 
-def ldap_create_user(username):
+def ldap_delete_user(username):
     '''
-    Create a new User record if possible.
+    Delete a User record if possible.
     '''
     try:
         conn = ldap_connect(modify=True)
