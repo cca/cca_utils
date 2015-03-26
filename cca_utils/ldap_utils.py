@@ -37,7 +37,7 @@ def ldap_connect(modify=None):
         conn = ldap.initialize(settings.LDAP_SERVER)
         conn.simple_bind_s(ldap_auth_dn, ldap_pass)
 
-        print("Connected to LDAP server {server}".format(server=settings.LDAP_SERVER))
+        # print("Connected to LDAP server {server}".format(server=settings.LDAP_SERVER))
         return conn
 
     except ldap.SERVER_DOWN:
@@ -56,7 +56,8 @@ def ldap_get_user_data(username=None, sid=None, dn_only=None, full=None):
         conn = ldap_connect()
 
         if sid:
-            filter = "(employeeNumber={sid})".format(sid=sid)
+            # TODO We should only have one canonical ID field
+            filter = "(|(ccaEmployeeNumber={sid})(employeeNumber={sid}))".format(sid=sid)
         else:
             filter = "(uid={user})".format(user=username)
 
