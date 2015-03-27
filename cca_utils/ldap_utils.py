@@ -190,46 +190,6 @@ def ldap_get_group(val):
         return False
 
 
-def ldap_generate_person_attribs(password, employeenum, uid, fname, lname, birthdate, campus, email):
-    # Generate list of attributes appropriate for submission to LDAP
-
-    # LDAP stores birthdates as simple strings of format 19711203, so all we need to do is
-    # stringify the date object and remove hyphens
-    bday_string = str(birthdate).replace('-', '')
-
-    attrs = {}
-    attrs['objectclass'] = [
-        'top'.encode('utf8'),
-        'person'.encode('utf8'),
-        'organizationalPerson'.encode('utf8'),
-        'inetOrgPerson'.encode('utf8'),
-        'eduPerson'.encode('utf8'),
-        'account'.encode('utf8'),
-        'posixAccount'.encode('utf8'),
-        'shadowAccount'.encode('utf8'),
-        'sambaSAMAccount'.encode('utf8'),
-        'passwordObject'.encode('utf8'),
-        'ccaPerson'.encode('utf8'),
-        ]
-    attrs['sn'] = lname.encode('utf8')
-    attrs['cn'] = fname.encode('utf8')
-    attrs['displayName'] = '{first} {last}'.format(first=fname, last=lname).encode('utf8')
-    attrs['userPassword'] = password.encode('utf8'),
-    attrs['ccaStudentNumber'] = str(employeenum).encode('utf8')
-    attrs['ccaEmployeeNumber'] = str(employeenum).encode('utf8')
-    attrs['uid'] = uid.encode('utf8')
-    attrs['givenName'] = fname.encode('utf8')
-    attrs['ccaBirthDate'] = bday_string.encode('utf8')
-    attrs['homeDirectory'] = '/Users/{username}'.format(username=uid).encode('utf8')
-    attrs['uidNumber'] = str(employeenum).encode('utf8')
-    attrs['gidNumber'] = str(20).encode('utf8')
-    attrs['sambaSID'] = ''.encode('utf8')  # We don't use this value but it must be present.
-    attrs['ccaPrimaryCampus'] = campus.encode('utf8')
-    attrs['mail'] = email.encode('utf8')
-
-    return attrs
-
-
 def ldap_add_members_to_group(groupcn, new_members):
     '''
     groupcn is the 'cn' attribute of an LDAP group (as string)
@@ -502,6 +462,77 @@ def ldap_delete_user(username):
         dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
         conn = ldap_connect(modify=True)
         conn.delete_s(dn)
+        return True
+    except:
+        return False
+
+
+def ldap_create_user(**kwargs):
+    '''
+    Takes a dictionary of key/value pairs, generates a dictonary of LDAP-formatted
+    properties and attempts to submit new record. Pass in e.g.:
+
+    kwargs = {
+        "password": password,
+        "employeenum": employeenum,
+        "fname": fname,
+        "lname": lname,
+        "birthdate": birthdate,
+        "email": email,
+        "uid": uid,
+        "campus": campus
+        }
+    '''
+    password = kwargs.get('password')
+    employeenum = kwargs.get('employeenum', None)  # Optional arg
+    uid = kwargs.get('uid')
+    fname = kwargs.get('fname')
+    lname = kwargs.get('lname')
+    birthdate = kwargs.get('birthdate')
+    campus = kwargs.get('campus')
+    email = kwargs.get('email')
+
+    # LDAP stores birthdates as simple strings of format 19711203, so all we need to do is
+    # stringify the date object and remove hyphens
+    bday_string = str(birthdate).replace('-', '')
+
+    attrs = {}
+    attrs['objectclass'] = [
+        'top'.encode('utf8'),
+        'person'.encode('utf8'),
+        'organizationalPerson'.encode('utf8'),
+        'inetOrgPerson'.encode('utf8'),
+        'eduPerson'.encode('utf8'),
+        'account'.encode('utf8'),
+        'posixAccount'.encode('utf8'),
+        'shadowAccount'.encode('utf8'),
+        'sambaSAMAccount'.encode('utf8'),
+        'passwordObject'.encode('utf8'),
+        'ccaPerson'.encode('utf8'),
+        ]
+    attrs['sn'] = lname.encode('utf8')
+    attrs['cn'] = fname.encode('utf8')
+    attrs['displayName'] = '{first} {last}'.format(first=fname, last=lname).encode('utf8')
+    attrs['userPassword'] = password.encode('utf8'),
+    attrs['ccaStudentNumber'] = str(employeenum).encode('utf8')
+    attrs['ccaEmployeeNumber'] = str(employeenum).encode('utf8')
+    attrs['uid'] = uid.encode('utf8')
+    attrs['givenName'] = fname.encode('utf8')
+    attrs['ccaBirthDate'] = bday_string.encode('utf8')
+    attrs['homeDirectory'] = '/Users/{username}'.format(username=uid).encode('utf8')
+    attrs['uidNumber'] = str(employeenum).encode('utf8')
+    attrs['gidNumber'] = str(20).encode('utf8')
+    attrs['sambaSID'] = ''.encode('utf8')  # We don't use this value but it must be present.
+    attrs['ccaPrimaryCampus'] = campus.encode('utf8')
+    attrs['mail'] = email.encode('utf8')
+
+    # Attempt to insert new LDAP user
+    try:
+        dn = "uid={username},ou=People,dc=cca,dc=edu".format(username=uid)
+        ldif = modlist.addModlist(attrs)
+        conn = ldap_connect(modify=True)
+        conn.add_s(dn, ldif)
+        conn.unbind_s()
         return True
     except:
         return False
