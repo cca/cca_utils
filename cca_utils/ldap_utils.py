@@ -536,3 +536,15 @@ def ldap_create_user(**kwargs):
         return True
     except:
         return False
+
+
+def ldap_change_password(username, password):
+    dn = "uid={username},ou=People,dc=cca,dc=edu".format(username=username)
+    conn = ldap_connect(modify=True)
+    mod_attrs = [(ldap.MOD_REPLACE, 'userPassword', [password])]
+
+    try:
+        conn.modify_s(dn, mod_attrs)
+        return True
+    except:
+        return False
