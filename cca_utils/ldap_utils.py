@@ -480,7 +480,6 @@ def ldap_create_user(**kwargs):
         "birthdate": birthdate,
         "email": email,
         "uid": uid,
-        "campus": campus
         }
     '''
     password = kwargs.get('password')
@@ -489,7 +488,6 @@ def ldap_create_user(**kwargs):
     fname = kwargs.get('fname')
     lname = kwargs.get('lname')
     birthdate = kwargs.get('birthdate')
-    campus = kwargs.get('campus')
     email = kwargs.get('email')
 
     # LDAP stores birthdates as simple strings of format 19711203, so all we need to do is
@@ -523,7 +521,6 @@ def ldap_create_user(**kwargs):
     attrs['uidNumber'] = str(employeenum).encode('utf8')
     attrs['gidNumber'] = str(20).encode('utf8')
     attrs['sambaSID'] = 'placeholder'.encode('utf8')  # We don't use this value but it must be present.
-    attrs['ccaPrimaryCampus'] = campus.encode('utf8')
     attrs['mail'] = email.encode('utf8')
 
     # Attempt to insert new LDAP user
