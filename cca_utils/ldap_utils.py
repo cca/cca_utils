@@ -294,12 +294,12 @@ def ldap_enable_disable_acct(username, action):
     mod_attrs = []
 
     if action == "enable":
-        mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', [epoch_time]))
-        mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', ''))
+        mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', [epoch_time, ]))
+        mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', None))
 
     if action == "disable":
-        mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', [epoch_time]))
-        mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', ''))
+        mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', [epoch_time, ]))
+        mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', None))
 
     try:
         conn = ldap_connect(modify=True)
@@ -522,7 +522,7 @@ def ldap_create_user(**kwargs):
     attrs['homeDirectory'] = '/Users/{username}'.format(username=uid).encode('utf8')
     attrs['uidNumber'] = str(employeenum).encode('utf8')
     attrs['gidNumber'] = str(20).encode('utf8')
-    attrs['sambaSID'] = ''.encode('utf8')  # We don't use this value but it must be present.
+    attrs['sambaSID'] = 'placeholder'.encode('utf8')  # We don't use this value but it must be present.
     attrs['ccaPrimaryCampus'] = campus.encode('utf8')
     attrs['mail'] = email.encode('utf8')
 
@@ -533,6 +533,7 @@ def ldap_create_user(**kwargs):
         conn = ldap_connect(modify=True)
         conn.add_s(dn, ldif)
         conn.unbind_s()
+        ldap_enable_disable_acct(uid, "enable")  # Set their account activation timestamp
         return True
     except:
         return False
