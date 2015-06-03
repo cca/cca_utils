@@ -156,16 +156,18 @@ def ldap_generate_uidnumber():
     LDAP has no auto-increment capability. Rather than go through all records
     and try to determine next ID, we set the uidNumber to something that's
     randomly chosen but available.
+
+    Datatel starts numbering at 1000000; this func starts at 2000000 to distinguish.
     '''
 
-    num = randint(1000000, 9999999)
+    num = randint(2000000, 9999999)
 
     if not ldap_get_user_data(uidnumber=num):
         return num
 
     # If we're still here, that uidNumber already exists in LDAP; keep trying.
     while ldap_get_user_data(uidnumber=num):
-        num = randint(1000000, 9999999)
+        num = randint(2000000, 9999999)
 
     return num
 
