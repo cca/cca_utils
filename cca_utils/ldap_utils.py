@@ -1,6 +1,7 @@
 from random import randint
 import ldap
 import time
+from passlib.hash import ldap_sha1
 import ldap.modlist as modlist
 
 from django.conf import settings
@@ -45,10 +46,11 @@ def ldap_connect(modify=None):
         return None
 
 
-def ldap_get_user_data(username=None, sid=None, dn_only=None, full=None):
+def ldap_get_user_data(username=None, sid=None, uidnumber=None, dn_only=None, full=None):
         '''
         Given a username or student ID, returns base LDAP data for a user.
         Pass sid=1234567 to retrieve by datatel ID rather than username.
+        Pass uidnumber=1234567 to retrieve by LDAP uidNumber.
         Pass dn_only=True to retrieve just the user's DN.
         Pass full=True to retrieve both the DN and
         '''
@@ -56,8 +58,9 @@ def ldap_get_user_data(username=None, sid=None, dn_only=None, full=None):
         conn = ldap_connect()
 
         if sid:
-            # TODO We should only have one canonical ID field
             filter = "(|(ccaEmployeeNumber={sid})(employeeNumber={sid}))".format(sid=sid)
+        elif uidnumber:
+            filter = "(uidnumber={uidnumber})".format(uidnumber=uidnumber)
         else:
             filter = "(uid={user})".format(user=username)
 
@@ -147,22 +150,22 @@ def ldap_get_next_gidNumber():
     return newnum
 
 
-def ldap_generate_employeenum():
+def ldap_generate_uidnumber():
     '''
-    employeenum is usually provided via datatel, but when creating users manually
-    (e.g. for consultants) we need to generate one. If an employeenum starts with 4,
-    it means it wasn't created by datatel. We must ensure our randomly selected one
-    isn't already in use.
+    uidNumber is required by LDAP, though CCA doesn't use it for anything.
+    LDAP has no auto-increment capability. Rather than go through all records
+    and try to determine next ID, we set the uidNumber to something that's
+    randomly chosen but available.
     '''
 
-    num = randint(4000000, 4999999)
+    num = randint(1000000, 9999999)
 
-    if not ldap_get_user_data(sid=num):
+    if not ldap_get_user_data(uidnumber=num):
         return num
 
-    # If we're still here, that employeenum already exists in LDAP, keep trying
-    while ldap_get_user_data(sid=num):
-        num = randint(4000000, 4999999)
+    # If we're still here, that uidNumber already exists in LDAP; keep trying.
+    while ldap_get_user_data(uidnumber=num):
+        num = randint(1000000, 9999999)
 
     return num
 
@@ -474,7 +477,6 @@ def ldap_create_user(**kwargs):
 
     kwargs = {
         "password": password,
-        "employeenum": employeenum,
         "fname": fname,
         "lname": lname,
         "birthdate": birthdate,
@@ -482,8 +484,9 @@ def ldap_create_user(**kwargs):
         "uid": uid,
         }
     '''
-    password = kwargs.get('password')
-    employeenum = kwargs.get('employeenum', None)  # Optional arg
+    raw_password = kwargs.get('password')
+    hashed_pass = ldap_sha1.encrypt(raw_password)
+
     uid = kwargs.get('uid')
     fname = kwargs.get('fname')
     lname = kwargs.get('lname')
@@ -511,14 +514,12 @@ def ldap_create_user(**kwargs):
     attrs['sn'] = lname.encode('utf8')
     attrs['cn'] = fname.encode('utf8')
     attrs['displayName'] = '{first} {last}'.format(first=fname, last=lname).encode('utf8')
-    attrs['userPassword'] = password.encode('utf8'),
-    attrs['ccaStudentNumber'] = str(employeenum).encode('utf8')
-    attrs['ccaEmployeeNumber'] = str(employeenum).encode('utf8')
+    attrs['userPassword'] = '{passwd}'.format(passwd=hashed_pass.encode('utf8')),
     attrs['uid'] = uid.encode('utf8')
     attrs['givenName'] = fname.encode('utf8')
     attrs['ccaBirthDate'] = bday_string.encode('utf8')
     attrs['homeDirectory'] = '/Users/{username}'.format(username=uid).encode('utf8')
-    attrs['uidNumber'] = str(employeenum).encode('utf8')
+    attrs['uidNumber'] = str(ldap_generate_uidnumber()).encode('utf8')
     attrs['gidNumber'] = str(20).encode('utf8')
     attrs['sambaSID'] = 'placeholder'.encode('utf8')  # We don't use this value but it must be present.
     attrs['mail'] = email.encode('utf8')
@@ -536,10 +537,11 @@ def ldap_create_user(**kwargs):
         return False
 
 
-def ldap_change_password(username, password):
+def ldap_change_password(username, raw_password):
     dn = "uid={username},ou=People,dc=cca,dc=edu".format(username=username)
     conn = ldap_connect(modify=True)
-    mod_attrs = [(ldap.MOD_REPLACE, 'userPassword', [password])]
+    hashed_pass = ldap_sha1.encrypt(raw_password)
+    mod_attrs = [(ldap.MOD_REPLACE, 'userPassword', [hashed_pass])]
 
     try:
         conn.modify_s(dn, mod_attrs)
