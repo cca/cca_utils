@@ -46,11 +46,12 @@ def ldap_connect(modify=None):
         return None
 
 
-def ldap_get_user_data(username=None, sid=None, uidnumber=None, dn_only=None, full=None):
+def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_only=None, full=None):
         '''
         Given a username or student ID, returns base LDAP data for a user.
         Pass sid=1234567 to retrieve by datatel ID rather than username.
         Pass uidnumber=1234567 to retrieve by LDAP uidNumber.
+        Pass wdid=1234567 to retrieve by Workday ID.
         Pass dn_only=True to retrieve just the user's DN.
         Pass full=True to retrieve both the DN and
         '''
@@ -61,6 +62,8 @@ def ldap_get_user_data(username=None, sid=None, uidnumber=None, dn_only=None, fu
             filter = "(|(ccaEmployeeNumber={sid})(employeeNumber={sid}))".format(sid=sid)
         elif uidnumber:
             filter = "(uidnumber={uidnumber})".format(uidnumber=uidnumber)
+        elif wdid:
+            filter = "(ccaWorkdayNumber={wdid})".format(wdid=wdid)
         else:
             filter = "(uid={user})".format(user=username)
 
@@ -113,6 +116,9 @@ def ldap_search(search_type, q):
 
     if search_type == "lname":
         filter = '(sn={q}*)'.format(q=q)
+
+    if search_type == "wdid":
+        filter = '(ccaWorkdayNumber={q})'.format(q=q)
 
     if search_type == "id":
         filter = '(|(employeeNumber={q}*)(ccaEmployeeNumber={q}*))'.format(q=q)
@@ -484,12 +490,14 @@ def ldap_create_user(**kwargs):
         "birthdate": birthdate,
         "email": email,
         "uid": uid,
+        "wdid": wdid,
         }
     '''
     raw_password = kwargs.get('password')
     hashed_pass = ldap_sha1.encrypt(raw_password)
 
     uid = kwargs.get('uid')
+    wdid = kwargs.get('wdid')
     fname = kwargs.get('fname')
     lname = kwargs.get('lname')
     birthdate = kwargs.get('birthdate')
@@ -523,6 +531,7 @@ def ldap_create_user(**kwargs):
     attrs['homeDirectory'] = '/Users/{username}'.format(username=uid).encode('utf8')
     attrs['uidNumber'] = str(ldap_generate_uidnumber()).encode('utf8')
     attrs['gidNumber'] = str(20).encode('utf8')
+    attrs['ccaWorkdayNumber'] = str(wdid).encode('utf8')
     attrs['sambaSID'] = 'placeholder'.encode('utf8')  # We don't use this value but it must be present.
     attrs['mail'] = email.encode('utf8')
 
