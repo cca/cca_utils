@@ -43,7 +43,7 @@ def ldap_connect(modify=None):
 
     except ldap.SERVER_DOWN:
         print("Connection to LDAP server failed")
-        return None
+        raise
 
 
 def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_only=None, full=None):
@@ -82,27 +82,35 @@ def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_on
                 return results[0][1]
 
         except:
-            return None
+            raise
 
 
 def ldap_get_all_users():
     '''Get all LDAP users as single giant dict. Useful for import scripts.'''
 
     conn = ldap_connect()
-    dn = "ou=People,dc=cca,dc=edu"
-    results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
-    conn.unbind_s()
-    return results
+
+    try:
+        dn = "ou=People,dc=cca,dc=edu"
+        results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
+        conn.unbind_s()
+        return results
+    except:
+        raise
 
 
 def ldap_get_all_groups():
     '''Get all LDAP groups'''
 
     conn = ldap_connect()
-    dn = "ou=Groups,dc=cca,dc=edu"
-    results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
-    conn.unbind_s()
-    return results
+
+    try:
+        dn = "ou=Groups,dc=cca,dc=edu"
+        results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
+        conn.unbind_s()
+        return results
+    except:
+        raise
 
 
 def ldap_search(search_type, q):
@@ -124,11 +132,14 @@ def ldap_search(search_type, q):
         filter = '(|(employeeNumber={q}*)(ccaEmployeeNumber={q}*))'.format(q=q)
 
     conn = ldap_connect()
-    dn = "ou=People,dc=cca,dc=edu"
-    results = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter)
 
-    conn.unbind_s()
-    return results
+    try:
+        dn = "ou=People,dc=cca,dc=edu"
+        results = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter)
+        conn.unbind_s()
+        return results
+    except:
+        raise
 
 
 def ldap_get_next_gidNumber():
@@ -198,7 +209,7 @@ def ldap_get_group(val):
         results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
         return results
     except:
-        return False
+        raise
 
 
 def ldap_add_members_to_group(groupcn, new_members):
@@ -226,7 +237,7 @@ def ldap_add_members_to_group(groupcn, new_members):
             conn.modify_s(groupdn, mod_attrs)
             return True
         except:
-            return False
+            raise
 
 
 def ldap_remove_members_from_group(groupcn, remove_members):
@@ -247,8 +258,8 @@ def ldap_remove_members_from_group(groupcn, remove_members):
         try:
             conn.modify_s(groupdn, mod_attrs)
             return True
-        except:  # TODO Be explicit with exception
-            return False
+        except:
+            raise
 
 
 def ldap_create_group(groupcn, description, displayName):
@@ -273,8 +284,8 @@ def ldap_create_group(groupcn, description, displayName):
     try:
         conn.add_s(groupdn, ldif)
         return True
-    except:  # TODO Be explicit with exception
-        return False
+    except:
+        raise
 
 
 def ldap_delete_group(groupcn):
@@ -290,7 +301,7 @@ def ldap_delete_group(groupcn):
         conn.delete(groupdn)
         return True
     except:
-        return False
+        raise
 
 
 def ldap_enable_disable_acct(username, action):
@@ -312,12 +323,12 @@ def ldap_enable_disable_acct(username, action):
         mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', [epoch_time, ]))
         mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', None))
 
+    conn = ldap_connect(modify=True)
     try:
-        conn = ldap_connect(modify=True)
         conn.modify_s(dn, mod_attrs)
         return True
     except:
-        return False
+        raise
 
 
 def get_all_entitlements():
@@ -325,14 +336,18 @@ def get_all_entitlements():
     Retrieve set of all possible user entitlements from LDAP.
     '''
     conn = ldap_connect()
-    # This DN is distinct from the main search and modify DNs
-    dn = "ou=administrators,ou=TopologyManagement,o=NetscapeRoot"
-    filter = '(objectclass=*)'
-    unsorted_results = conn.search_ext_s(dn, ldap.SCOPE_ONELEVEL, filter, ["uid", "givenName", ])
-    results = sorted(unsorted_results)  # Alphabetize for display
-    conn.unbind_s()
 
-    return results
+    try:
+        # This DN is distinct from the main search and modify DNs
+        dn = "ou=administrators,ou=TopologyManagement,o=NetscapeRoot"
+        filter = '(objectclass=*)'
+        unsorted_results = conn.search_ext_s(dn, ldap.SCOPE_ONELEVEL, filter, ["uid", "givenName", ])
+        results = sorted(unsorted_results)  # Alphabetize for display
+        conn.unbind_s()
+
+        return results
+    except:
+        raise
 
 
 def get_user_entitlements(username):
@@ -391,7 +406,7 @@ def replace_user_entitlements(username, entitlements):
         conn.modify_s(dn, mod_attrs)
         return True
     except:
-        return False
+        raise
 
 
 def get_email_aliases(username):
@@ -427,12 +442,12 @@ def replace_email_aliases(username, aliases):
     mod_attrs = []
     mod_attrs.append((ldap.MOD_REPLACE, 'mail', new_aliases))
 
+    conn = ldap_connect(modify=True)
     try:
-        conn = ldap_connect(modify=True)
         conn.modify_s(dn, mod_attrs)
         return True
     except:
-        return False
+        raise
 
 
 def ldap_generate_username(first, last):
@@ -468,14 +483,15 @@ def ldap_delete_user(username):
     '''
     Delete a User record if possible.
     '''
+
+    conn = ldap_connect(modify=True)
     try:
-        conn = ldap_connect(modify=True)
         dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
         conn = ldap_connect(modify=True)
         conn.delete_s(dn)
         return True
     except:
-        return False
+        raise
 
 
 def ldap_create_user(**kwargs):
@@ -545,7 +561,7 @@ def ldap_create_user(**kwargs):
         ldap_enable_disable_acct(uid, "enable")  # Set their account activation timestamp
         return True
     except:
-        return False
+        raise
 
 
 def ldap_change_password(username, raw_password):
@@ -558,4 +574,4 @@ def ldap_change_password(username, raw_password):
         conn.modify_s(dn, mod_attrs)
         return True
     except:
-        return False
+        raise
