@@ -1,6 +1,8 @@
 from random import randint
 import ldap
 import time
+import random
+import string
 from passlib.hash import ldap_sha1
 import ldap.modlist as modlist
 
@@ -315,6 +317,10 @@ def ldap_enable_disable_acct(username, action):
     if action == "disable":
         mod_attrs.append((ldap.MOD_REPLACE, 'ccaDisableTime', [epoch_time, ]))
         mod_attrs.append((ldap.MOD_REPLACE, 'ccaActivateTime', None))
+
+        # Set random long password on disabled account
+        randpass = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(24))
+        ldap_change_password(username, randpass)
 
     conn = ldap_connect(modify=True)
     try:
