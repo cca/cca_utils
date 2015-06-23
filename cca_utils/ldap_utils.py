@@ -7,19 +7,6 @@ import ldap.modlist as modlist
 from django.conf import settings
 
 
-def validate_email(email):
-    '''
-    Guarantee an email string has a valid format.
-    '''
-    from django.core.validators import validate_email
-    from django.core.exceptions import ValidationError
-    try:
-        validate_email(email)
-        return True
-    except ValidationError:
-        return False
-
-
 def ldap_connect(modify=None):
     '''
     Returns an LDAP connection object, to be used by various search functions.
@@ -36,6 +23,7 @@ def ldap_connect(modify=None):
 
     try:
         conn = ldap.initialize(settings.LDAP_SERVER)
+        # conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
         conn.simple_bind_s(ldap_auth_dn, ldap_pass)
 
         # print("Connected to LDAP server {server}".format(server=settings.LDAP_SERVER))
@@ -73,13 +61,15 @@ def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_on
             # First element is the user DN, 2nd is a dict of their data,
             # which can be accessed via e.g.:
             # data['displayName'], data['ccaStudentNumber'], data['loginShell']
-
-            if dn_only and not full:
-                return results[0][0]
-            elif full:
-                return results[0]
+            if results:
+                if dn_only and not full:
+                    return results[0][0]
+                elif full:
+                    return results[0]
+                else:
+                    return results[0][1]
             else:
-                return results[0][1]
+                return False
 
         except:
             raise
@@ -209,7 +199,7 @@ def ldap_get_group(val):
         results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
         return results
     except:
-        raise
+        return False
 
 
 def ldap_add_members_to_group(groupcn, new_members):
@@ -237,7 +227,9 @@ def ldap_add_members_to_group(groupcn, new_members):
             conn.modify_s(groupdn, mod_attrs)
             return True
         except:
-            raise
+            # In most cases a failure here is because there's an orphaned user already
+            # in the group we're trying to add to.
+            return False
 
 
 def ldap_remove_members_from_group(groupcn, remove_members):
@@ -301,6 +293,7 @@ def ldap_delete_group(groupcn):
         conn.delete(groupdn)
         return True
     except:
+        print("failed to delete group")
         raise
 
 
@@ -507,6 +500,7 @@ def ldap_create_user(**kwargs):
         "email": email,
         "uid": uid,
         "wdid": wdid,
+        "cca_id": cca_id,
         }
     '''
     raw_password = kwargs.get('password')
@@ -514,6 +508,7 @@ def ldap_create_user(**kwargs):
 
     uid = kwargs.get('uid')
     wdid = kwargs.get('wdid')
+    cca_id = kwargs.get('cca_id')
     fname = kwargs.get('fname')
     lname = kwargs.get('lname')
     birthdate = kwargs.get('birthdate')
@@ -548,6 +543,7 @@ def ldap_create_user(**kwargs):
     attrs['uidNumber'] = str(ldap_generate_uidnumber()).encode('utf8')
     attrs['gidNumber'] = str(20).encode('utf8')
     attrs['ccaWorkdayNumber'] = str(wdid).encode('utf8')
+    attrs['ccaEmployeeNumber'] = str(cca_id).encode('utf8')
     attrs['sambaSID'] = 'placeholder'.encode('utf8')  # We don't use this value but it must be present.
     attrs['mail'] = email.encode('utf8')
 
