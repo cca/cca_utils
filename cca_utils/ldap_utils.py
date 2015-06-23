@@ -432,9 +432,8 @@ def replace_email_aliases(username, aliases):
 
     new_aliases = []
     for addr in aliases:
-        if validate_email(addr):
-            addr = addr.encode('utf-8')
-            new_aliases.append(addr)
+        addr = addr.encode('utf-8')
+        new_aliases.append(addr)
 
     dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
 
