@@ -25,10 +25,8 @@ def ldap_connect(modify=None):
 
     try:
         conn = ldap.initialize(settings.LDAP_SERVER)
-        # conn.set_option(ldap.OPT_REFERRALS, ldap.OPT_OFF)
         conn.simple_bind_s(ldap_auth_dn, ldap_pass)
 
-        # print("Connected to LDAP server {server}".format(server=settings.LDAP_SERVER))
         return conn
 
     except ldap.SERVER_DOWN:
@@ -83,7 +81,7 @@ def ldap_get_all_users():
     conn = ldap_connect()
 
     try:
-        dn = "ou=People,dc=cca,dc=edu"
+        dn = settings.LDAP_PEOPLE_OU
         results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
         conn.unbind_s()
         return results
@@ -97,7 +95,7 @@ def ldap_get_all_groups():
     conn = ldap_connect()
 
     try:
-        dn = "ou=Groups,dc=cca,dc=edu"
+        dn = settings.LDAP_GROUPS_OU
         results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
         conn.unbind_s()
         return results
@@ -126,7 +124,7 @@ def ldap_search(search_type, q):
     conn = ldap_connect()
 
     try:
-        dn = "ou=People,dc=cca,dc=edu"
+        dn = settings.LDAP_PEOPLE_OU
         results = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter)
         conn.unbind_s()
         return results
@@ -192,9 +190,9 @@ def ldap_get_group(val):
 
     # Does val start with a digit? Then it's an ID
     if val[0].isalpha():
-        dn = "cn={val},ou=Groups,dc=cca,dc=edu".format(val=val)
+        dn = "cn={val},{ou}".format(val=val, ou=settings.settings.LDAP_GROUPS_OU)
     else:
-        dn = "gidNumber={val},ou=Groups,dc=cca,dc=edu".format(val=val)
+        dn = "gidNumber={val},{ou}".format(val=val, ou=settings.LDAP_GROUPS_OU)
 
     conn = ldap_connect()
     try:
@@ -211,7 +209,7 @@ def ldap_add_members_to_group(groupcn, new_members):
     Returns True or False.
     '''
 
-    groupdn = "cn={groupcn},ou=Groups,dc=cca,dc=edu".format(groupcn=groupcn)
+    groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = []
 
     # Make sure there's something in the list to process
@@ -241,7 +239,7 @@ def ldap_remove_members_from_group(groupcn, remove_members):
     Returns True or False.
     '''
 
-    groupdn = "cn={groupcn},ou=Groups,dc=cca,dc=edu".format(groupcn=groupcn)
+    groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = []
     if len(remove_members) > 0:
         for person in remove_members:
@@ -266,7 +264,7 @@ def ldap_create_group(groupcn, description, displayName):
     # Increment group number
     gidNumber = ldap_get_next_gidNumber()
 
-    groupdn = "cn={groupcn},ou=Groups,dc=cca,dc=edu".format(groupcn=groupcn)
+    groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = {}
     mod_attrs['objectclass'] = ['top'.encode('utf-8'), 'posixGroup'.encode('utf-8')]
     mod_attrs['cn'] = groupcn.encode('utf-8')
@@ -288,7 +286,7 @@ def ldap_delete_group(groupcn):
     groupcn is the 'cn' attribute of an LDAP group (as string).
     '''
 
-    groupdn = "cn={groupcn},ou=Groups,dc=cca,dc=edu".format(groupcn=groupcn)
+    groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     conn = ldap_connect(modify=True)
 
     try:
@@ -307,7 +305,7 @@ def ldap_enable_disable_acct(username, action):
     '''
 
     epoch_time = str(int(time.time())).encode('utf-8')
-    dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
+    dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
     mod_attrs = []
 
     if action == "enable":
@@ -395,7 +393,7 @@ def replace_user_entitlements(username, entitlements):
         ent = 'urn:mace:cca.edu:entitlement:{ent}'.format(ent=ent).encode('utf-8')
         new_entitlements.append(ent)
 
-    dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
+    dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
 
     mod_attrs = []
     mod_attrs.append((ldap.MOD_REPLACE, 'eduPersonEntitlement', new_entitlements))
@@ -435,7 +433,7 @@ def replace_email_aliases(username, aliases):
         addr = addr.encode('utf-8')
         new_aliases.append(addr)
 
-    dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
+    dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
 
     mod_attrs = []
     mod_attrs.append((ldap.MOD_REPLACE, 'mail', new_aliases))
@@ -484,7 +482,7 @@ def ldap_delete_user(username):
 
     conn = ldap_connect(modify=True)
     try:
-        dn = "uid={user},ou=People,dc=cca,dc=edu".format(user=username)
+        dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
         conn = ldap_connect(modify=True)
         conn.delete_s(dn)
         return True
@@ -554,7 +552,7 @@ def ldap_create_user(**kwargs):
 
     # Attempt to insert new LDAP user
     try:
-        dn = "uid={username},ou=People,dc=cca,dc=edu".format(username=uid)
+        dn = "uid={username},{ou}".format(username=uid, ou=settings.LDAP_PEOPLE_OU)
         ldif = modlist.addModlist(attrs)
         conn = ldap_connect(modify=True)
         conn.add_s(dn, ldif)
@@ -566,7 +564,7 @@ def ldap_create_user(**kwargs):
 
 
 def ldap_change_password(username, raw_password):
-    dn = "uid={username},ou=People,dc=cca,dc=edu".format(username=username)
+    dn = "uid={username},{ou}".format(username=username, ou=settings.LDAP_PEOPLE_OU)
     conn = ldap_connect(modify=True)
     hashed_pass = ldap_sha1.encrypt(raw_password)
     mod_attrs = [(ldap.MOD_REPLACE, 'userPassword', [hashed_pass])]
