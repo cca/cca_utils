@@ -7,6 +7,7 @@ from passlib.hash import ldap_sha1
 import ldap.modlist as modlist
 
 from django.conf import settings
+# import test_settings as settings
 
 
 def ldap_connect(modify=None):
@@ -190,7 +191,7 @@ def ldap_get_group(val):
 
     # Does val start with a digit? Then it's an ID
     if val[0].isalpha():
-        dn = "cn={val},{ou}".format(val=val, ou=settings.settings.LDAP_GROUPS_OU)
+        dn = "cn={val},{ou}".format(val=val, ou=settings.LDAP_GROUPS_OU)
     else:
         dn = "gidNumber={val},{ou}".format(val=val, ou=settings.LDAP_GROUPS_OU)
 
