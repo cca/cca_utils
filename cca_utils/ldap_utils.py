@@ -427,7 +427,7 @@ def get_email_aliases(username):
 
 def replace_email_aliases(username, aliases):
     '''
-    Validate submitted email addrs in submitted list and modify user LDAP record.
+    Takes a [list] of validated emails and updates user LDAP record.
     '''
 
     new_aliases = []
