@@ -79,3 +79,25 @@ GOOGLE_CLIENT_SECRET = 'abc123'
 GOOGLE_SUB_USER = 'someone@yourdomain.org'  # Email of a superuser on your domain
 GOOGLE_APPLICATION_NAME = 'our-project-name'  # As listed in Google Developers Console
 ```
+
+## Tests
+
+This library is intended to be used either with or without a Django project. However, it depends on a lot of settings (above), typically associated with Django. If you are working with it outside of Django or want to run the tests standalone, create a `cca_utils/test_settings.py` file and change this line in `ldap_utils.py`:
+
+```
+# from django.conf import settings
+import test_settings as settings
+```
+
+To run all tests:
+
+```nosetests```
+
+To run a single test:
+
+```nosetests tests:TestClass.test_add_members_to_group```
+
+To prevent print debug print statements from being swallowed:
+
+```nosetests -s ....```
+
