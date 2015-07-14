@@ -59,8 +59,8 @@ def google_update_user(request, username, data):
     a python data structure conforming to schema at http://bit.ly/1DzJS8P
 
     e.g. (in another function):
-        hashed = hashlib.md5("foobar123").hexdigest()
-        data = {'hashFunction': 'MD5', 'password': hashed}
+        hashed = hashlib.sha1("foobar123").hexdigest()
+        data = {'hashFunction': 'SHA1', 'password': hashed}
         google_update_user(request, 'msmith', data)
     '''
 
@@ -70,7 +70,7 @@ def google_update_user(request, username, data):
         service.users().update(userKey="{u}@{d}".format(u=username, d=settings.GOOGLE_DOMAIN), body=data).execute()
         return True
     except:
-        return False
+        raise
 
 
 def google_create_user(person_data):
@@ -79,14 +79,14 @@ def google_create_user(person_data):
     Takes `person_data` as a python dict. e.g. (in another function):
 
         password = form.cleaned_data['password']
-        hashed = hashlib.md5(password).hexdigest()
+        hashed = hashlib.sha1(password).hexdigest()
 
         person_data = {
             "name": {
                 "familyName": lname,
                 "givenName": fname
             },
-            "hashFunction": 'MD5',
+            "hashFunction": 'SHA1',
             "password": hashed,
             "primaryEmail": email
         }
