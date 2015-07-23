@@ -6,9 +6,9 @@ import string
 from passlib.hash import ldap_sha1
 import ldap.modlist as modlist
 
-# from django.conf import settings
+from django.conf import settings
 # import test_settings as settings
-from cca_utils import cca_test_settings as settings
+# from cca_utils import cca_test_settings as settings
 
 
 def ldap_connect(modify=None):
