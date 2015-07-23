@@ -6,8 +6,9 @@ import string
 from passlib.hash import ldap_sha1
 import ldap.modlist as modlist
 
-from django.conf import settings
+# from django.conf import settings
 # import test_settings as settings
+from cca_utils import cca_test_settings as settings
 
 
 def ldap_connect(modify=None):
@@ -48,7 +49,7 @@ def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_on
         conn = ldap_connect()
 
         if sid:
-            filter = "(|(ccaEmployeeNumber={sid})(employeeNumber={sid}))".format(sid=sid)
+            filter = "(ccaEmployeeNumber={sid})".format(sid=sid)
         elif uidnumber:
             filter = "(uidnumber={uidnumber})".format(uidnumber=uidnumber)
         elif wdid:
@@ -61,7 +62,7 @@ def ldap_get_user_data(username=None, sid=None, uidnumber=None, wdid=None, dn_on
             # `results` is a tuple.
             # First element is the user DN, 2nd is a dict of their data,
             # which can be accessed via e.g.:
-            # data['displayName'], data['ccaStudentNumber'], data['loginShell']
+            # data['displayName'], data['ccaEmployeeNumber'], data['loginShell']
             if results:
                 if dn_only and not full:
                     return results[0][0]
@@ -120,7 +121,7 @@ def ldap_search(search_type, q):
         filter = '(ccaWorkdayNumber={q})'.format(q=q)
 
     if search_type == "id":
-        filter = '(|(employeeNumber={q}*)(ccaEmployeeNumber={q}*))'.format(q=q)
+        filter = '(ccaEmployeeNumber={q}*)'.format(q=q)
 
     conn = ldap_connect()
 
