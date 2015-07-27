@@ -70,7 +70,7 @@ def google_update_user(request, username, data):
         service.users().update(userKey="{u}@{d}".format(u=username, d=settings.GOOGLE_DOMAIN), body=data).execute()
         return True
     except:
-        raise
+        return False
 
 
 def google_create_user(person_data):
