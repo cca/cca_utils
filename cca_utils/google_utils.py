@@ -53,7 +53,7 @@ def google_get_emailsettings_credentials():
     return client
 
 
-def google_update_user(request, username, data):
+def google_update_user(username, data):
     '''
     Updates arbitrary fields on a Google Directory user entry. Takes `data` as
     a python data structure conforming to schema at http://bit.ly/1DzJS8P
@@ -61,7 +61,7 @@ def google_update_user(request, username, data):
     e.g. (in another function):
         hashed = hashlib.sha1("foobar123").hexdigest()
         data = {'hashFunction': 'SHA1', 'password': hashed}
-        google_update_user(request, 'msmith', data)
+        google_update_user('msmith', data)
     '''
 
     try:
@@ -90,7 +90,7 @@ def google_create_user(person_data):
             "password": hashed,
             "primaryEmail": email
         }
-        google_create_user(request, person_data)
+        google_create_user(person_data)
     '''
 
     try:
@@ -132,7 +132,24 @@ def google_remove_user(username):
         return False
 
 
-def google_set_aliases(request, username, aliases):
+def google_get_aliases(username):
+    '''
+    Get all Google-stored aliases for a given username.
+    '''
+    try:
+        http_auth = google_get_auth(scope='https://www.googleapis.com/auth/admin.directory.user.alias')
+        service = build("admin", "directory_v1", http=http_auth)
+        data = service.users().aliases().list(userKey="{u}@{d}".format(u=username, d=settings.GOOGLE_DOMAIN)).execute()
+        google_aliases = data['aliases']
+        aliases = []
+        for a in google_aliases:
+            aliases.append(a['alias'])
+        return aliases
+    except:
+        return False
+
+
+def google_set_aliases(username, aliases):
     '''
     Resets the list of email aliases for a user in the Google directory.
     To ensure that LDAP is canonical, we first delete all Google aliases,
@@ -140,7 +157,7 @@ def google_set_aliases(request, username, aliases):
 
     e.g. (in another function):
         aliases = ['foo@cca.edu', 'bar@cca.edu']
-        google_set_aliases(request, 'msmith', aliases)
+        google_set_aliases('msmith', aliases)
 
     '''
     try:
