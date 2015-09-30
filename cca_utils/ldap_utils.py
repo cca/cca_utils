@@ -330,6 +330,22 @@ def ldap_enable_disable_acct(username, action):
         raise
 
 
+def ldap_rename_acct(oldusername, newusername):
+    '''
+    Rename an LDAP account from oldusername to newusername.
+    '''
+
+    dn = "uid={user},{ou}".format(user=oldusername, ou=settings.LDAP_PEOPLE_OU)
+    newrdn = "uid={user}".format(user=newusername)
+
+    conn = ldap_connect(modify=True)
+    try:
+        conn.rename_s(dn, newrdn, delold=1)
+        return True
+    except:
+        raise
+
+
 def get_all_entitlements():
     '''
     Retrieve set of all possible user entitlements from LDAP.
