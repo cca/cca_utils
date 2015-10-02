@@ -180,3 +180,20 @@ def google_set_aliases(username, aliases):
         return True
     except:
         return False
+
+
+def google_get_all_orgunits():
+    '''
+    Get all Google org units for our domain. Special user 'my_customer' is reserved
+    for admin calls like this one to get all.
+    '''
+    try:
+        http_auth = google_get_auth(scope=[
+            'https://www.googleapis.com/auth/admin.directory.user',
+            'https://www.googleapis.com/auth/admin.directory.orgunit',
+            ])
+        service = build("admin", "directory_v1", http=http_auth)
+        data = service.orgunits().list(customerId='my_customer', type='all').execute()
+        return data['organizationUnits']
+    except:
+        return False
