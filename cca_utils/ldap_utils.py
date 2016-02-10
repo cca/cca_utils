@@ -337,10 +337,21 @@ def ldap_rename_acct(oldusername, newusername):
 
     dn = "uid={user},{ou}".format(user=oldusername, ou=settings.LDAP_PEOPLE_OU)
     newrdn = "uid={user}".format(user=newusername)
+    newemail = "{u}@cca.edu".format(u=newusername)
 
     conn = ldap_connect(modify=True)
     try:
+        # Update the 'mail' field on the record *first*, then rename the account;
+        # otherwise the dn object changes out from under us.
+        mod_attrs = [
+            (ldap.MOD_REPLACE, 'mail', [newemail.encode('utf8')]),
+        ]
+        if conn.modify_s(dn, mod_attrs):
+            message = 'LDAP record fields changed for {user}'.format(user=newrdn)
+
+        # Rename the account itself
         conn.rename_s(dn, newrdn, delold=1)
+
         return True
     except:
         raise
