@@ -2,10 +2,13 @@ import random
 import string
 import time
 
-from ldap3 import Server, Connection, AUTH_SIMPLE, STRATEGY_SYNC, ALL, MODIFY_ADD, MODIFY_REPLACE
+from ldap3 import (
+    Server, Connection, AUTH_SIMPLE, STRATEGY_SYNC, ALL,
+    MODIFY_ADD, MODIFY_REPLACE, MODIFY_DELETE)
 from passlib.hash import ldap_sha1
 
 from django.conf import settings
+
 
 def ldap_connect():
     '''
@@ -157,6 +160,20 @@ def ldap_create_user(**kwargs):
         raise
 
 
+def ldap_delete_user(username):
+    '''
+    Delete a User record if possible.
+    '''
+
+    try:
+        dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
+        conn = ldap_connect()
+        conn.delete(dn)
+        return True
+    except:
+        raise
+
+
 def ldap_add_members_to_group(groupcn, new_members):
     '''
     groupcn is the 'cn' attribute of an LDAP group (as string)
@@ -185,6 +202,26 @@ def ldap_add_members_to_group(groupcn, new_members):
         except:
             # In most cases a failure here is because there's an orphaned user already
             # in the group we're trying to add to.
+            raise
+
+
+def ldap_remove_members_from_group(groupcn, remove_members):
+    '''
+    groupcn is the 'cn' attribute of an LDAP group (as string)
+    new_members is a python list of username strings to add to that group.
+    Returns True or False.
+    '''
+
+    groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
+    mod_attrs = {}
+    if len(remove_members) > 0:
+        mod_attrs['memberUid'] = [MODIFY_DELETE, remove_members]
+
+        try:
+            conn = ldap_connect()
+            conn.modify(groupdn, mod_attrs)
+            return True
+        except:
             raise
 
 
