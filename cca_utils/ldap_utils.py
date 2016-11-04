@@ -307,7 +307,7 @@ def ldap_enable_disable_acct(username, action):
     '''
 
     epoch_time = str(int(time.time())).encode('utf-8')
-    dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
+    dn = "uid={user},{ou}".format(user=username.encode('utf-8'), ou=settings.LDAP_PEOPLE_OU)
     mod_attrs = []
 
     if action == "enable":
