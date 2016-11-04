@@ -586,7 +586,7 @@ def ldap_create_user(**kwargs):
         conn = ldap_connect(modify=True)
         conn.add_s(dn, ldif)
         conn.unbind_s()
-        ldap_enable_disable_acct(uid, "enable")  # Set their account activation timestamp
+        ldap_enable_disable_acct(uid.encode('utf8'), "enable")  # Set their account activation timestamp
         return True
     except:
         raise
