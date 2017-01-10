@@ -173,27 +173,24 @@ def ldap_delete_user(username):
     except:
         raise
 
-
 def ldap_add_members_to_group(groupcn, new_members):
     '''
     groupcn is the 'cn' attribute of an LDAP group (as string)
     new_members is a python list of username strings to add to that group.
     Returns True or False.
     '''
-
     groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = {}
 
     # Make sure new_members is actually a list
     if isinstance(new_members, list):
-
+        add_members = []
         # Remove any non-existent LDAP users from list
         for person in new_members:
+            add_members.append('uid={u},{ou}'.format(ou=settings.LDAP_PEOPLE_OU, u=person))
             if not ldap_get_user_data(person):
-                new_members.remove(person)
-
-        mod_attrs['memberUid'] = [MODIFY_ADD, new_members]
-
+                add_members.remove(person)
+        mod_attrs['member'] = [MODIFY_ADD, add_members]
         # Batch-add all new users
         try:
             conn = ldap_connect()
@@ -214,14 +211,24 @@ def ldap_remove_members_from_group(groupcn, remove_members):
 
     groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = {}
-    if len(remove_members) > 0:
-        mod_attrs['memberUid'] = [MODIFY_DELETE, remove_members]
 
+    # Make sure remove_members is actually a list
+    if isinstance(remove_members, list):
+        del_members = []
+        # Remove any non-existent LDAP users from list
+        for person in remove_members:
+            del_members.append('uid={u},{ou}'.format(ou=settings.LDAP_PEOPLE_OU, u=person))
+            if not ldap_get_user_data(person):
+                del_members.remove(person)
+        mod_attrs['member'] = [MODIFY_DELETE, del_members]
+        # Batch-add all new users
         try:
             conn = ldap_connect()
             conn.modify(groupdn, mod_attrs)
             return True
         except:
+            # In most cases a failure here is because there's an orphaned user already
+            # in the group we're trying to add to.
             raise
 
 
@@ -295,3 +302,69 @@ def replace_user_entitlements(username, entitlements):
         return True
     except:
         raise
+
+def ldap_get_next_gidNumber():
+    '''
+    Parse output of get_all_groups to determine next group ID
+    Dirapp group IDs are between 2000 & 4000
+    '''
+    results = ldap_get_all_groups()
+    newarr = []
+    for r in results:
+        if 'gidNumber' in r[1]:
+            num = int(r[1]['gidNumber'][0])
+            if num >= 2000 and num <= 4000:
+                newarr.append(num)
+
+    final = sorted(list(set(newarr)))  # Sorted set of unique vals
+
+    # In case list is empty, start numbering at 2000
+    # Otherwise get last element and add one to get our value
+    if len(final) == 0:
+        newnum = 2000
+    else:
+        newnum = final[-1] + 1
+
+    return newnum
+
+def ldap_get_all_groups():
+    '''Get all LDAP groups'''
+
+    conn = ldap_connect()
+
+    try:
+        dn = settings.LDAP_GROUPS_OU
+        results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
+        conn.unbind_s()
+        return results
+    except:
+        raise
+
+def ldap_search(search_type, q):
+    '''Search the directory by string (username, first, last names)'''
+
+    if search_type == "username":
+        filter = '(uid={q}*)'.format(q=q)
+
+    if search_type == "fname":
+        filter = '(givenName={q}*)'.format(q=q)
+
+    if search_type == "lname":
+        filter = '(sn={q}*)'.format(q=q)
+
+    if search_type == "wdid":
+        filter = '(ccaWorkdayNumber={q})'.format(q=q)
+
+    if search_type == "id":
+        filter = '(ccaEmployeeNumber={q}*)'.format(q=q)
+
+    conn = ldap_connect()
+
+    try:
+        dn = settings.LDAP_PEOPLE_OU
+        results = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter)
+        conn.unbind_s()
+        return results
+    except:
+        raise
+
