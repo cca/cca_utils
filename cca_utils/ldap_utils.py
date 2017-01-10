@@ -220,8 +220,10 @@ def ldap_add_members_to_group(groupcn, new_members):
 
             # Verify user exists in LDAP before adding to group,
             # then build up the list of tuples LDAP expects.
+            # memberOf requires members to be in the form of uid=USER,ou=People,dc=cca,dc=edu
             if ldap_get_user_data(person):
-                mod_attrs.append((ldap.MOD_ADD, 'memberUid', [person.encode('utf-8')]))
+                person_dn = "uid={person},ou=People,dc=cca,dc=edu".format(person=person)
+                mod_attrs.append((ldap.MOD_ADD, 'member', [person_dn.encode('utf-8')]))
 
         # Now batch-add all new users
         conn = ldap_connect(modify=True)
@@ -245,8 +247,9 @@ def ldap_remove_members_from_group(groupcn, remove_members):
     mod_attrs = []
     if len(remove_members) > 0:
         for person in remove_members:
+            person_dn = "uid={person},ou=People,dc=cca,dc=edu".format(person=person)
             # Build up a list of tuples, which LDAP expects
-            mod_attrs.append((ldap.MOD_DELETE, 'memberUid', [person.encode('utf-8')]))
+            mod_attrs.append((ldap.MOD_DELETE, 'member', [person_dn.encode('utf-8')]))
 
         conn = ldap_connect(modify=True)
         try:
@@ -268,9 +271,8 @@ def ldap_create_group(groupcn, description, displayName):
 
     groupdn = "cn={groupcn},{ou}".format(groupcn=groupcn, ou=settings.LDAP_GROUPS_OU)
     mod_attrs = {}
-    mod_attrs['objectclass'] = ['top'.encode('utf-8'), 'posixGroup'.encode('utf-8')]
+    mod_attrs['objectclass'] = ['top'.encode('utf-8'), 'groupofnames'.encode('utf-8')]
     mod_attrs['cn'] = groupcn.encode('utf-8')
-    mod_attrs['gidNumber'] = str(gidNumber).encode('utf-8')
     mod_attrs['description'] = description.encode('utf-8')
 
     ldif = modlist.addModlist(mod_attrs)
@@ -556,6 +558,7 @@ def ldap_create_user(**kwargs):
         'person'.encode('utf8'),
         'organizationalPerson'.encode('utf8'),
         'inetOrgPerson'.encode('utf8'),
+        'inetuser'.encode('utf8'),
         'eduPerson'.encode('utf8'),
         'account'.encode('utf8'),
         'posixAccount'.encode('utf8'),
@@ -603,3 +606,15 @@ def ldap_change_password(username, raw_password):
         return True
     except:
         raise
+
+
+def convert_group_member_uid(ldapgroup):
+    '''
+    Takes the LDAP group member string (full LDAP DN) and returns a list of UIDs
+    '''
+    current_members = ldapgroup[0][1]['member']
+    current_members_uid = []
+    for person in current_members:
+        user = (person.replace("uid=","").replace(",ou=People,dc=cca,dc=edu",""))
+        current_members_uid.append(user)
+    return current_members_uid
