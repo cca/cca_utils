@@ -35,15 +35,10 @@ def google_get_emailsettings_credentials():
     TODO: Refactor when API is updated.
     '''
 
-    with open(settings.GOOGLE_PATH_TO_KEYFILE) as f:
-        private_key = f.read()
-
     client = EmailSettingsClient(domain=settings.GOOGLE_DOMAIN)
-    credentials = SignedJwtAssertionCredentials(
-        settings.GOOGLE_CLIENT_EMAIL,
-        private_key,
-        scope='https://apps-apis.google.com/a/feeds/emailsettings/2.0/',
-        sub=settings.GOOGLE_SUB_USER)
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        settings.GOOGLE_PATH_TO_KEYFILE,
+        scopes='https://apps-apis.google.com/a/feeds/emailsettings/2.0/').create_delegated(settings.GOOGLE_SUB_USER)
     auth2token = gdata.gauth.OAuth2TokenFromCredentials(credentials)
     auth2token.authorize(client)
 
