@@ -1,7 +1,7 @@
 from django.conf import settings
 
 # Google python client library
-from oauth2client.client import SignedJwtAssertionCredentials
+from oauth2client.service_account import ServiceAccountCredentials
 from gdata.apps.emailsettings.client import EmailSettingsClient
 from apiclient.discovery import build
 from httplib2 import Http
@@ -21,12 +21,9 @@ def google_get_auth(scope=None):
     service = build("admin", "directory_v1", http=http_auth)
     '''
 
-    client_email = settings.GOOGLE_CLIENT_EMAIL
-    with open(settings.GOOGLE_PATH_TO_KEYFILE) as f:
-        private_key = f.read()
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        settings.GOOGLE_PATH_TO_KEYFILE, scopes=scope).create_delegated(settings.GOOGLE_SUB_USER)
 
-    credentials = SignedJwtAssertionCredentials(client_email, private_key, scope=scope,
-                                                sub=settings.GOOGLE_SUB_USER)
     http_auth = credentials.authorize(Http())
     return http_auth
 

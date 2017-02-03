@@ -2,6 +2,6 @@ from distutils.core import setup
 
 setup(
     name='cca_utils',
-    version='1.4',
+    version='1.5',
     packages=['cca_utils'],
 )
