@@ -2,14 +2,14 @@ from django.conf import settings
 
 # Google python client library
 from oauth2client.service_account import ServiceAccountCredentials
-from gdata.apps.emailsettings.client import EmailSettingsClient
+# from gdata.apps.emailsettings.client import EmailSettingsClient
 from apiclient.discovery import build
 from httplib2 import Http
 
 # gdata is deprecated and won't be updated. Used here only for the EmailSettings API,
 # which is an outlier and not yet updated to newer Google OAuth2. This will cause
 # problems for Python3 users.
-import gdata
+# import gdata
 
 
 def google_get_auth(scope=None):
