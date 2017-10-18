@@ -618,3 +618,22 @@ def convert_group_member_uid(ldapgroup):
         user = (person.replace("uid=","").replace(",ou=People,dc=cca,dc=edu",""))
         current_members_uid.append(user)
     return current_members_uid
+
+
+def ldap_require_2fa(username, mfa_url):
+    '''
+    Takes a username and URL and adds a eduPersonAssurance value 
+    to require 2FA use
+    '''
+
+    dn = "uid={user},{ou}".format(user=username, ou=settings.LDAP_PEOPLE_OU)
+
+    mod_attrs = []
+    mod_attrs.append((ldap.MOD_ADD, 'eduPersonAssurance', mfa_url))
+
+    try:
+        conn = ldap_connect(modify=True)
+        conn.modify_s(dn, mod_attrs)
+        return True
+    except:
+        raise
