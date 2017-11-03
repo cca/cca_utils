@@ -3,7 +3,7 @@ import string
 import time
 
 from ldap3 import (
-    Server, Connection, AUTH_SIMPLE, STRATEGY_SYNC, ALL,
+    Server, Connection, AUTH_SIMPLE, STRATEGY_SYNC, ALL, SUBTREE,
     MODIFY_ADD, MODIFY_REPLACE, MODIFY_DELETE)
 from passlib.hash import ldap_sha1
 
@@ -28,7 +28,7 @@ def ldap_connect():
         conn.bind()
         return conn
 
-    except:
+    except Exception:
         print("Connection to LDAP server failed")
         raise
 
@@ -54,14 +54,12 @@ def ldap_get_user_data(username=None, ccaid=None, uidnumber=None, wdid=None):
             conn = ldap_connect()
             attributes = ['sn', 'givenName', 'uid', 'mail', 'ccaEmployeeNumber', 'ccaWorkdayNumber']
             results = conn.search(settings.LDAP_BASE_DN, filter, attributes=attributes)
-            if results:
-                entries = conn.entries[0]
-                return entries
-            else:
-                return None
-
-        except:
+        except Exception:
             raise
+        finally:
+            conn.unbind()
+
+        return conn.entries[0] if results else None
 
 
 def ldap_generate_uidnumber():
@@ -156,7 +154,7 @@ def ldap_create_user(**kwargs):
         conn.unbind()
         ldap_enable_disable_acct(uid, "enable")  # Set their account activation timestamp
         return True
-    except:
+    except Exception:
         raise
 
 
@@ -170,8 +168,9 @@ def ldap_delete_user(username):
         conn = ldap_connect()
         conn.delete(dn)
         return True
-    except:
+    except Exception:
         raise
+
 
 def ldap_add_members_to_group(groupcn, new_members):
     '''
@@ -196,7 +195,7 @@ def ldap_add_members_to_group(groupcn, new_members):
             conn = ldap_connect()
             conn.modify(groupdn, mod_attrs)
             return True
-        except:
+        except Exception:
             # In most cases a failure here is because there's an orphaned user already
             # in the group we're trying to add to.
             raise
@@ -226,7 +225,7 @@ def ldap_remove_members_from_group(groupcn, remove_members):
             conn = ldap_connect()
             conn.modify(groupdn, mod_attrs)
             return True
-        except:
+        except Exception:
             # In most cases a failure here is because there's an orphaned user already
             # in the group we're trying to add to.
             raise
@@ -259,7 +258,7 @@ def ldap_enable_disable_acct(username, action):
         conn = ldap_connect()
         conn.modify(dn, mod_attrs)
         return True
-    except:
+    except Exception:
         raise
 
 
@@ -273,7 +272,7 @@ def ldap_change_password(username, raw_password):
         conn = ldap_connect()
         conn.modify(dn, mod_attrs)
         return True
-    except:
+    except Exception:
         raise
 
 
@@ -300,8 +299,9 @@ def replace_user_entitlements(username, entitlements):
         conn = ldap_connect()
         conn.modify(dn, mod_attrs)
         return True
-    except:
+    except Exception:
         raise
+
 
 def ldap_get_next_gidNumber():
     '''
@@ -327,18 +327,21 @@ def ldap_get_next_gidNumber():
 
     return newnum
 
+
 def ldap_get_all_groups():
     '''Get all LDAP groups'''
 
-    conn = ldap_connect()
-
     try:
+        conn = ldap_connect()
         dn = settings.LDAP_GROUPS_OU
-        results = conn.search_s(dn, ldap.SCOPE_SUBTREE)
-        conn.unbind_s()
-        return results
-    except:
+        results = conn.search(dn, search_scope=SUBTREE)
+    except Exception:
         raise
+    finally:
+        conn.unbind()
+
+    return results
+
 
 def ldap_search(search_type, q):
     '''Search the directory by string (username, first, last names)'''
@@ -358,13 +361,31 @@ def ldap_search(search_type, q):
     if search_type == "id":
         filter = '(ccaEmployeeNumber={q}*)'.format(q=q)
 
-    conn = ldap_connect()
-
     try:
+        conn = ldap_connect()
         dn = settings.LDAP_PEOPLE_OU
-        results = conn.search_s(dn, ldap.SCOPE_SUBTREE, filter)
-        conn.unbind_s()
-        return results
-    except:
+        results = conn.search(dn, search_scope=SUBTREE, search_filter=filter)
+    except Exception:
         raise
+    finally:
+        conn.unbind()
 
+    return results
+
+
+def ldap_user_has_group(username):
+    '''
+    Given a username, check if this user has group info in LDAP
+    '''
+
+    filter = "(uid={user})".format(user=username)
+    try:
+        conn = ldap_connect()
+        attributes = ['memberOf']
+        results = conn.search(settings.LDAP_BASE_DN, filter, attributes=attributes)
+    except Exception:
+        raise
+    finally:
+        conn.unbind()
+
+    return True if results else False
