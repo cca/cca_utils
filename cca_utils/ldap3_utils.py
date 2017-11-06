@@ -54,12 +54,13 @@ def ldap_get_user_data(username=None, ccaid=None, uidnumber=None, wdid=None):
             conn = ldap_connect()
             attributes = ['sn', 'givenName', 'uid', 'mail', 'ccaEmployeeNumber', 'ccaWorkdayNumber']
             results = conn.search(settings.LDAP_BASE_DN, filter, attributes=attributes)
+            ret = conn.entries[0] if results else None
         except Exception:
             raise
         finally:
             conn.unbind()
 
-        return conn.entries[0] if results else None
+        return ret
 
 
 def ldap_generate_uidnumber():
