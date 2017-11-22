@@ -279,7 +279,6 @@ def ldap_change_password(username, raw_password):
 
 def ldap_add_assurance(username, assurance):
     dn = "uid={username},{ou}".format(username=username, ou=settings.LDAP_PEOPLE_OU)
-    mod_attrs = {}
     mod_attrs = {'eduPersonAssurance': [MODIFY_ADD, assurance]}
 
     conn = ldap_connect()
@@ -289,7 +288,6 @@ def ldap_add_assurance(username, assurance):
 
 def ldap_remove_assurance(username, assurance):
     dn = "uid={username},{ou}".format(username=username, ou=settings.LDAP_PEOPLE_OU)
-    mod_attrs = {}
     mod_attrs = {'eduPersonAssurance': [MODIFY_DELETE, assurance]}
 
     conn = ldap_connect()
