@@ -277,6 +277,24 @@ def ldap_change_password(username, raw_password):
         raise
 
 
+def ldap_add_assurance(username, assurance):
+    dn = "uid={username},{ou}".format(username=username, ou=settings.LDAP_PEOPLE_OU)
+    mod_attrs = {'eduPersonAssurance': [MODIFY_ADD, assurance]}
+
+    conn = ldap_connect()
+    conn.modify(dn, mod_attrs)
+    return True
+
+
+def ldap_remove_assurance(username, assurance):
+    dn = "uid={username},{ou}".format(username=username, ou=settings.LDAP_PEOPLE_OU)
+    mod_attrs = {'eduPersonAssurance': [MODIFY_DELETE, assurance]}
+
+    conn = ldap_connect()
+    conn.modify(dn, mod_attrs)
+    return True
+
+
 def replace_user_entitlements(username, entitlements):
     '''
     Takes a username and a simple list of the "uid"s of entitlements,
