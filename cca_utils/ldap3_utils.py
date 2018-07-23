@@ -3,7 +3,7 @@ import string
 import time
 
 from ldap3 import (
-    Server, Connection, AUTH_SIMPLE, STRATEGY_SYNC, ALL, SUBTREE,
+    Server, Connection, SIMPLE, SYNC, ALL, SUBTREE,
     MODIFY_ADD, MODIFY_REPLACE, MODIFY_DELETE)
 from passlib.hash import ldap_sha1
 
@@ -17,12 +17,13 @@ def ldap_connect():
     pass in `modify=True` to use the writable connection.
     '''
 
+    # default: client_strategy=SYNC, authentication=SIMPLE
     try:
         server = Server(settings.LDAP_SERVER, port=389, get_info=ALL)
         conn = Connection(
-            server, authentication=AUTH_SIMPLE, user=settings.LDAP_AUTH_SEARCH_DN,
+            server, authentication=SIMPLE, user=settings.LDAP_AUTH_SEARCH_DN,
             password=settings.LDAP_MODIFY_PASS, check_names=True, lazy=False,
-            client_strategy=STRATEGY_SYNC, raise_exceptions=True
+            client_strategy=SYNC, raise_exceptions=True
             )
 
         conn.bind()
@@ -272,6 +273,18 @@ def ldap_change_password(username, raw_password):
     try:
         conn = ldap_connect()
         conn.modify(dn, mod_attrs)
+        return True
+    except Exception:
+        raise
+
+
+def ldap_change_username(old_username, new_username):
+    dn = "uid={user},{ou}".format(user=old_username, ou=settings.LDAP_PEOPLE_OU)
+    newrdn = "uid={user}".format(user=new_username)
+
+    try:
+        conn = ldap_connect()
+        conn.modify_dn(dn, newrdn)
         return True
     except Exception:
         raise
